@@ -20,14 +20,13 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Build firmware
+      shell: bash
       run: |
         . /opt/esp/idf/export.sh
         cd esp32-midi-gateway
-        # Append N16R8 config
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
-        # Build directly - IDF_TARGET is set in job env, sdkconfig.defaults is used
         idf.py build
 
     - name: Upload firmware artifacts
