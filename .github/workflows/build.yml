@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build with ESP-IDF
+    - name: Build firmware with ESP-IDF
       uses: espressif/esp-idf-ci-action@v1
       with:
         esp_idf_version: v5.0
@@ -28,28 +28,30 @@ jobs:
           echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
           idf.py reconfigure
           idf.py build 2>&1 | tee build.log
+          echo "=== Build complete ==="
 
-    - name: Collect artifacts
-      if: always()
+    - name: Collect artifacts from build directory
       run: |
-        mkdir -p /tmp/artifacts
         cd esp32-midi-gateway
-        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null || echo "no bin"
-        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || echo "no bootloader"
-        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || echo "no ptable"
-        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || echo "no ota"
-        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || echo "no elf"
-        cp build/build.log /tmp/artifacts/ 2>/dev/null || echo "no build log"
-        cp build/flash_args /tmp/artifacts/ 2>/dev/null || echo "no flash_args"
-        ls -la /tmp/artifacts/
+        mkdir -p /tmp/artifacts
+        echo "=== Checking build directory ==="
+        find build/ -type f -name "*.bin" -o -name "*.elf" -o -name "flash_args" -o -name "build.log" 2>/dev/null
+        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null && echo "bin copied" || echo "NO BIN FOUND"
+        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null && echo "bootloader copied" || echo "NO BOOTLOADER"
+        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null && echo "ptable copied" || echo "NO PTABLE"
+        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null && echo "ota copied" || echo "NO OTA"
+        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null && echo "elf copied" || echo "NO ELF"
+        cp build/build.log /tmp/artifacts/ 2>/dev/null && echo "log copied" || echo "NO LOG"
+        cp build/flash_args /tmp/artifacts/ 2>/dev/null && echo "flash_args copied" || echo "NO FLASH_ARGS"
+        echo "=== Artifacts ==="
+        ls -la /tmp/artifacts/ || echo "No artifacts found"
 
-    - name: Upload firmware
+    - name: Upload firmware binaries
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
         path: /tmp/artifacts/
         retention-days: 30
-        if-no-files-found: warn
 
   phone-receiver-check:
     runs-on: ubuntu-latest
