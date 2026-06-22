@@ -10,6 +10,7 @@ on:
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v4
 
@@ -19,39 +20,32 @@ jobs:
         esp_idf_version: v5.0
         target: esp32s3
         path: esp32-midi-gateway
-        command: >
-          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults &&
-          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults &&
-          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults &&
-          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults &&
-          idf.py reconfigure &&
-          idf.py build 2>&1 | tee build.log &&
-          mkdir -p /github/home/artifacts &&
-          cp build/*.bin /github/home/artifacts/ &&
-          echo "--- artifacts list ---" &&
-          ls -la /github/home/artifacts/
+        command: |
+          git config --global --add safe.directory '*'
+          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+          idf.py reconfigure
+          idf.py build 2>&1 | tee build.log
+
+    - name: Collect firmware binaries
+      run: |
+        set -x
+        # Find and copy all .bin files from esp32-midi-gateway/build
+        mkdir -p /tmp/artifacts
+        if [ -d esp32-midi-gateway/build ]; then
+          find esp32-midi-gateway/build -name "*.bin" -exec cp -v {} /tmp/artifacts/ \;
+          cp esp32-midi-gateway/build/build.log /tmp/artifacts/ 2>/dev/null || true
+        fi
+        echo "=== artifacts ==="
+        ls -la /tmp/artifacts/ || echo "EMPTY"
 
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
-        path: /home/runner/artifacts/*.bin
-        retention-days: 30
-
-    - name: Upload firmware artifacts (alt path)
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: esp32s3-midi-gateway-firmware-alt
-        path: esp32-midi-gateway/build/*.bin
-        retention-days: 30
-
-    - name: Upload build log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-log
-        path: esp32-midi-gateway/build/build.log
+        path: /tmp/artifacts/
         retention-days: 30
 
   phone-receiver-check:
