@@ -10,48 +10,44 @@ on:
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.0
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-    - name: Build firmware with ESP-IDF
-      uses: espressif/esp-idf-ci-action@v1
-      with:
-        esp_idf_version: v5.0
-        target: esp32s3
-        path: 'esp32-midi-gateway'
-        command: |
-          git config --global --add safe.directory '*'
-          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
-          idf.py reconfigure
-          idf.py build 2>&1 | tee build.log
-          echo "=== Build complete ==="
-
-    - name: Collect artifacts from build directory
+    - name: Build firmware
       run: |
-        set -x
-        cd esp32-midi-gateway
-        pwd
-        echo "=== Full directory tree ==="
-        find . -maxdepth 4 -type d 2>/dev/null | head -20
-        echo "=== Build directory contents ==="
-        ls -la build/ 2>&1 || echo "No build dir"
-        ls -la build/*.bin 2>&1 || echo "No bin files"
-        mkdir -p /tmp/artifacts
-        cp -v build/esp32-midi-gateway.bin /tmp/artifacts/ 2>&1 || echo "NO BIN"
-        cp -v build/bootloader/bootloader.bin /tmp/artifacts/ 2>&1 || echo "NO BOOTLOADER"
-        cp -v build/partition_table/partition-table.bin /tmp/artifacts/ 2>&1 || echo "NO PTABLE"
-        cp -v build/build.log /tmp/artifacts/ 2>&1 || echo "NO LOG"
-        ls -la /tmp/artifacts/
+        . /opt/esp/idf/export.sh
 
-    - name: Upload firmware binaries
+        cd esp32-midi-gateway
+
+        # Set target
+        idf.py set-target esp32s3
+
+        # N16R8 config
+        echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+
+        idf.py reconfigure
+        idf.py build 2>&1 | tee build.log
+
+    - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
-        path: /tmp/artifacts/
+        path: esp32-midi-gateway/build/*.bin
+        retention-days: 30
+
+    - name: Upload build log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: esp32-midi-gateway/build/build.log
         retention-days: 30
 
   phone-receiver-check:
