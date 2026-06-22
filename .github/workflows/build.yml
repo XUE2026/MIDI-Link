@@ -32,19 +32,20 @@ jobs:
 
     - name: Collect artifacts from build directory
       run: |
+        set -x
         cd esp32-midi-gateway
+        pwd
+        echo "=== Full directory tree ==="
+        find . -maxdepth 4 -type d 2>/dev/null | head -20
+        echo "=== Build directory contents ==="
+        ls -la build/ 2>&1 || echo "No build dir"
+        ls -la build/*.bin 2>&1 || echo "No bin files"
         mkdir -p /tmp/artifacts
-        echo "=== Checking build directory ==="
-        find build/ -type f -name "*.bin" -o -name "*.elf" -o -name "flash_args" -o -name "build.log" 2>/dev/null
-        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null && echo "bin copied" || echo "NO BIN FOUND"
-        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null && echo "bootloader copied" || echo "NO BOOTLOADER"
-        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null && echo "ptable copied" || echo "NO PTABLE"
-        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null && echo "ota copied" || echo "NO OTA"
-        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null && echo "elf copied" || echo "NO ELF"
-        cp build/build.log /tmp/artifacts/ 2>/dev/null && echo "log copied" || echo "NO LOG"
-        cp build/flash_args /tmp/artifacts/ 2>/dev/null && echo "flash_args copied" || echo "NO FLASH_ARGS"
-        echo "=== Artifacts ==="
-        ls -la /tmp/artifacts/ || echo "No artifacts found"
+        cp -v build/esp32-midi-gateway.bin /tmp/artifacts/ 2>&1 || echo "NO BIN"
+        cp -v build/bootloader/bootloader.bin /tmp/artifacts/ 2>&1 || echo "NO BOOTLOADER"
+        cp -v build/partition_table/partition-table.bin /tmp/artifacts/ 2>&1 || echo "NO PTABLE"
+        cp -v build/build.log /tmp/artifacts/ 2>&1 || echo "NO LOG"
+        ls -la /tmp/artifacts/
 
     - name: Upload firmware binaries
       uses: actions/upload-artifact@v4
