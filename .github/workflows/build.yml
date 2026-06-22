@@ -28,25 +28,29 @@ jobs:
           echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
           idf.py reconfigure
           idf.py build 2>&1 | tee build.log
+          # Copy to parent dir (workspace root via volume mount)
+          mkdir -p ../artifacts
+          cp build/*.bin ../artifacts/
+          cp build/build.log ../artifacts/ 2>/dev/null || true
+          echo "=== Artifacts copied to workspace root ==="
+          ls -la ../artifacts/
 
     - name: Collect firmware binaries
       run: |
-        set -x
-        # Find and copy all .bin files from esp32-midi-gateway/build
-        mkdir -p /tmp/artifacts
-        if [ -d esp32-midi-gateway/build ]; then
-          find esp32-midi-gateway/build -name "*.bin" -exec cp -v {} /tmp/artifacts/ \;
-          cp esp32-midi-gateway/build/build.log /tmp/artifacts/ 2>/dev/null || true
-        fi
-        echo "=== artifacts ==="
-        ls -la /tmp/artifacts/ || echo "EMPTY"
+        echo "=== Workspace root ==="
+        pwd && ls -la
+        echo "=== artifacts/ directory ==="
+        ls -la artifacts/ || echo "NOT FOUND at root"
+        echo "=== Search all .bin ==="
+        find . -name "*.bin" 2>/dev/null | head -20
 
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
-        path: /tmp/artifacts/
+        path: artifacts/
         retention-days: 30
+        if-no-files-found: error
 
   phone-receiver-check:
     runs-on: ubuntu-latest
