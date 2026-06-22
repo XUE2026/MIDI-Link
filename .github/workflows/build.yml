@@ -22,7 +22,13 @@ jobs:
     - name: Build firmware
       shell: bash
       run: |
-        . /opt/esp/idf/export.sh
+        set -x
+        whoami
+        pwd
+        ls -la
+        which idf.py 2>/dev/null || echo "idf.py not in PATH"
+        . /opt/esp/idf/export.sh 2>&1
+        which idf.py 2>/dev/null || echo "idf.py still not found after export"
         cd esp32-midi-gateway
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
