@@ -10,56 +10,69 @@ on:
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup ESP-IDF
-      uses: espressif/esp-idf-action@v1
-      with:
-        esp_idf_version: v5.0
-        target: esp32s3
-
-    - name: Build firmware for ESP32-S3 N16R8
-      shell: bash
-      working-directory: esp32-midi-gateway
+    - name: Check environment and set target
       run: |
-        # Apply N16R8 specific config
+        . /opt/esp/idf/export.sh
+        idf.py --version
+        echo "=== Checking tools ==="
+        ls /opt/esp/tools/tools/ 2>/dev/null | head -5 || echo "No tools dir"
+        
+        cd esp32-midi-gateway
+        echo "=== Setting target to esp32s3 ==="
+        idf.py set-target esp32s3 2>&1
+        
+    - name: Configure for N16R8
+      run: |
+        . /opt/esp/idf/export.sh
+        cd esp32-midi-gateway
+        
         echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+        
+        idf.py reconfigure 2>&1
 
-        idf.py reconfigure
-
-        echo "Building firmware..."
+    - name: Build firmware
+      run: |
+        . /opt/esp/idf/export.sh
+        cd esp32-midi-gateway
+        
+        echo "=== Starting build ==="
         idf.py build 2>&1 | tee build.log
-        BUILD_STATUS=${PIPESTATUS[0]}
-        echo "Build exit code: $BUILD_STATUS"
-        if [ $BUILD_STATUS -ne 0 ]; then
-            echo "=== LAST 50 LINES OF BUILD LOG ==="
-            tail -50 build.log
-            echo "=== BUILD LOG END ==="
-            exit $BUILD_STATUS
+        STATUS=$?
+        echo "=== Build exit code: $STATUS ==="
+        if [ $STATUS -ne 0 ]; then
+            echo "=== LAST 80 LINES ==="
+            tail -80 build.log
+            exit $STATUS
         fi
-        echo "Build complete."
 
-    - name: Collect build artifacts
+    - name: Collect artifacts
       if: always()
       run: |
         mkdir -p /tmp/artifacts
         cd esp32-midi-gateway
-        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null || echo "No firmware bin"
-        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || echo "No bootloader"
-        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || echo "No partition table"
-        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || echo "No ota data"
-        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || echo "No elf"
-        cp build/build.log /tmp/artifacts/ 2>/dev/null || echo "No build log"
-        cp build/flash_args /tmp/artifacts/ 2>/dev/null || echo "No flash args"
+        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null && echo "bin OK" || true
+        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null && echo "bootloader OK" || true
+        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null && echo "ptable OK" || true
+        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null && echo "ota OK" || true
+        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null && echo "elf OK" || true
+        cp build/build.log /tmp/artifacts/ 2>/dev/null && echo "log OK" || true
+        cp build/flash_args /tmp/artifacts/ 2>/dev/null && echo "flash_args OK" || true
         ls -la /tmp/artifacts/
 
-    - name: Upload firmware artifacts
+    - name: Upload firmware
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
@@ -68,22 +81,14 @@ jobs:
 
   phone-receiver-check:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-
     - name: Check Python syntax
-      run: |
-        python -m py_compile phone-receiver/midi_receiver.py
-        echo "Python syntax check passed"
-
-    - name: Upload phone receiver scripts
+      run: python -m py_compile phone-receiver/midi_receiver.py
+    - name: Upload scripts
       uses: actions/upload-artifact@v4
       with:
         name: phone-receiver-scripts
