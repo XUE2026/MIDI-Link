@@ -7,6 +7,9 @@ on:
     branches: [ "development", "main" ]
   workflow_dispatch:
 
+env:
+  IDF_TARGET: esp32s3
+
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
@@ -23,9 +26,6 @@ jobs:
 
         cd esp32-midi-gateway
 
-        # Set target
-        idf.py set-target esp32s3
-
         # N16R8 config
         echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
@@ -34,6 +34,9 @@ jobs:
 
         idf.py reconfigure
         idf.py build 2>&1 | tee build.log
+
+        echo "=== Build artifacts ==="
+        ls -la build/*.bin
 
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
