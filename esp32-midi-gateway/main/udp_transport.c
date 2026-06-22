@@ -4,6 +4,7 @@
 #include "lwip/netdb.h"
 #include <string.h>
 #include <sys/time.h>
+#include <errno.h>
 
 static const char *TAG = "UDP_XPORT";
 

@@ -3,10 +3,6 @@ name: Build ESP32-S3 MIDI Gateway
 on:
   push:
     branches: [ "development", "main" ]
-    paths:
-      - 'esp32-midi-gateway/**'
-      - '.github/workflows/**'
-      - 'phone-receiver/**'
   pull_request:
     branches: [ "development", "main" ]
   workflow_dispatch:
@@ -14,25 +10,21 @@ on:
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
-    container:
-      image: espressif/idf:v5.0
-    defaults:
-      run:
-        shell: bash
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up ESP-IDF environment and build
+    - name: Setup ESP-IDF
+      uses: espressif/esp-idf-action@v1
+      with:
+        esp_idf_version: v5.0
+        target: esp32s3
+
+    - name: Build firmware for ESP32-S3 N16R8
+      shell: bash
+      working-directory: esp32-midi-gateway
       run: |
-        . /opt/esp/idf/export.sh
-
-        cd esp32-midi-gateway
-
-        # Configure for ESP32-S3 N16R8
-        idf.py set-target esp32s3
-
         # Apply N16R8 specific config
         echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
@@ -43,10 +35,18 @@ jobs:
 
         echo "Building firmware..."
         idf.py build 2>&1 | tee build.log
-
+        BUILD_STATUS=${PIPESTATUS[0]}
+        echo "Build exit code: $BUILD_STATUS"
+        if [ $BUILD_STATUS -ne 0 ]; then
+            echo "=== LAST 50 LINES OF BUILD LOG ==="
+            tail -50 build.log
+            echo "=== BUILD LOG END ==="
+            exit $BUILD_STATUS
+        fi
         echo "Build complete."
 
     - name: Collect build artifacts
+      if: always()
       run: |
         mkdir -p /tmp/artifacts
         cd esp32-midi-gateway
