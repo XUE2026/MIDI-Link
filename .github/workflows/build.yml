@@ -6,12 +6,10 @@ on:
     paths:
       - 'esp32-midi-gateway/**'
       - '.github/workflows/**'
+      - 'phone-receiver/**'
   pull_request:
     branches: [ "development", "main" ]
   workflow_dispatch:
-
-env:
-  BUILD_DIR: esp32-midi-gateway
 
 jobs:
   build-esp32s3:
@@ -21,81 +19,59 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: esp32-midi-gateway
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        path: esp32-midi-gateway
 
-    - name: Set ESP-IDF environment
+    - name: Set up ESP-IDF environment and build
       run: |
         . /opt/esp/idf/export.sh
-        echo "IDF_PATH=/opt/esp/idf" >> $GITHUB_ENV
 
-    - name: Set target to ESP32-S3
-      run: |
-        . /opt/esp/idf/export.sh
+        cd esp32-midi-gateway
+
+        # Configure for ESP32-S3 N16R8
         idf.py set-target esp32s3
 
-    - name: Configure for N16R8 (16MB flash + 8MB PSRAM)
-      run: |
-        . /opt/esp/idf/export.sh
-        idf.py menuconfig 2>/dev/null || true
-        # Set flash size to 16MB
+        # Apply N16R8 specific config
         echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+
         idf.py reconfigure
 
-    - name: Build firmware
-      id: build
-      run: |
-        . /opt/esp/idf/export.sh
+        echo "Building firmware..."
         idf.py build 2>&1 | tee build.log
 
+        echo "Build complete."
+
     - name: Collect build artifacts
-      id: artifacts
       run: |
         mkdir -p /tmp/artifacts
-        # 收集所有构建产物
-        cp build/esp32-midi-gateway.bin /tmp/artifacts/
-        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || true
-        cp build/flash_args /tmp/artifacts/ 2>/dev/null || true
-        cp build/build.log /tmp/artifacts/ 2>/dev/null || true
+        cd esp32-midi-gateway
+        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null || echo "No firmware bin"
+        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || echo "No bootloader"
+        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || echo "No partition table"
+        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || echo "No ota data"
+        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || echo "No elf"
+        cp build/build.log /tmp/artifacts/ 2>/dev/null || echo "No build log"
+        cp build/flash_args /tmp/artifacts/ 2>/dev/null || echo "No flash args"
         ls -la /tmp/artifacts/
 
-    - name: Upload build artifacts
+    - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
         path: /tmp/artifacts/
-        retention-days: 7
-
-    - name: Prepare binary for release
-      run: |
-        echo "Build complete for ESP32-S3 N16R8"
-        echo "Firmware size: $(stat -c%s build/esp32-midi-gateway.bin) bytes"
-        echo "Build ID: ${{ github.run_id }}"
-        echo "Run number: ${{ github.run_number }}"
+        retention-days: 30
 
   phone-receiver-check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: phone-receiver
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        path: phone-receiver
 
     - name: Setup Python
       uses: actions/setup-python@v5
@@ -104,12 +80,12 @@ jobs:
 
     - name: Check Python syntax
       run: |
-        python -m py_compile midi_receiver.py
+        python -m py_compile phone-receiver/midi_receiver.py
         echo "Python syntax check passed"
 
-    - name: Upload phone receiver script
+    - name: Upload phone receiver scripts
       uses: actions/upload-artifact@v4
       with:
         name: phone-receiver-scripts
         path: phone-receiver/
-        retention-days: 7
+        retention-days: 30
