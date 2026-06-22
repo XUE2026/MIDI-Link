@@ -7,7 +7,7 @@
 #include "ota_manager.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
-#include "cJSON.h"
+#include "cjson/cJSON.h"
 #include <string.h>
 #include <stdlib.h>
 

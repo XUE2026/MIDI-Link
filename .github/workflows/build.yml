@@ -10,72 +10,46 @@ on:
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
-    container:
-      image: espressif/idf:v5.0
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Build firmware
-      id: build_step
-      continue-on-error: true
-      run: |
-        . /opt/esp/idf/export.sh
-        git config --global --add safe.directory '*'
-
-        cd esp32-midi-gateway
-
-        idf.py set-target esp32s3 2>&1 | tee target.log
-        echo "=== TARGET SET LOG END ==="
-
-        echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
-        echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
-        echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
-        echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
-
-        idf.py reconfigure 2>&1 | tee reconfigure.log
-        echo "=== RECONFIGURE LOG END ==="
-
-        echo "=== Starting idf.py build ==="
-        idf.py build 2>&1 | tee build.log
-        echo "=== BUILD EXIT CODE: ${PIPESTATUS[0]} ==="
-
-    - name: Upload build logs (always)
-      if: always()
-      uses: actions/upload-artifact@v4
+    - name: Build with ESP-IDF
+      uses: espressif/esp-idf-ci-action@v1
       with:
-        name: build-logs
-        path: esp32-midi-gateway/*.log
-        retention-days: 30
-
-    - name: Check build status
-      if: steps.build_step.outcome == 'failure'
-      run: |
-        echo "=== Build failed. Full log available in build-logs artifact ==="
-        exit 1
+        esp_idf_version: v5.0
+        target: esp32s3
+        path: 'esp32-midi-gateway'
+        command: |
+          git config --global --add safe.directory '*'
+          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+          idf.py reconfigure
+          idf.py build 2>&1 | tee build.log
 
     - name: Collect artifacts
-      if: success()
+      if: always()
       run: |
         mkdir -p /tmp/artifacts
         cd esp32-midi-gateway
-        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || true
-        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || true
-        cp build/flash_args /tmp/artifacts/ 2>/dev/null || true
-        cp build/build.log /tmp/artifacts/ 2>/dev/null || true
+        cp build/esp32-midi-gateway.bin /tmp/artifacts/ 2>/dev/null || echo "no bin"
+        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || echo "no bootloader"
+        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || echo "no ptable"
+        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || echo "no ota"
+        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || echo "no elf"
+        cp build/build.log /tmp/artifacts/ 2>/dev/null || echo "no build log"
+        cp build/flash_args /tmp/artifacts/ 2>/dev/null || echo "no flash_args"
         ls -la /tmp/artifacts/
 
     - name: Upload firmware
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
         path: /tmp/artifacts/
         retention-days: 30
+        if-no-files-found: warn
 
   phone-receiver-check:
     runs-on: ubuntu-latest
