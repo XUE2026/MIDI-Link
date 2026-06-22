@@ -1,0 +1,22 @@
+# 项目内部文档目录 - 不允许推送到GitHub
+/i/
+
+# ESP-IDF构建输出
+esp32-midi-gateway/build/
+esp32-midi-gateway/sdkconfig
+
+# Python虚拟环境/缓存
+phone-receiver/__pycache__/
+phone-receiver/*.pyc
+
+# IDE/编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# 日志
+*.log

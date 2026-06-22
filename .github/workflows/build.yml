@@ -1,0 +1,115 @@
+name: Build ESP32-S3 MIDI Gateway
+
+on:
+  push:
+    branches: [ "development", "main" ]
+    paths:
+      - 'esp32-midi-gateway/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "development", "main" ]
+  workflow_dispatch:
+
+env:
+  BUILD_DIR: esp32-midi-gateway
+
+jobs:
+  build-esp32s3:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.0
+    defaults:
+      run:
+        shell: bash
+        working-directory: esp32-midi-gateway
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: esp32-midi-gateway
+
+    - name: Set ESP-IDF environment
+      run: |
+        . /opt/esp/idf/export.sh
+        echo "IDF_PATH=/opt/esp/idf" >> $GITHUB_ENV
+
+    - name: Set target to ESP32-S3
+      run: |
+        . /opt/esp/idf/export.sh
+        idf.py set-target esp32s3
+
+    - name: Configure for N16R8 (16MB flash + 8MB PSRAM)
+      run: |
+        . /opt/esp/idf/export.sh
+        idf.py menuconfig 2>/dev/null || true
+        # Set flash size to 16MB
+        echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+        idf.py reconfigure
+
+    - name: Build firmware
+      id: build
+      run: |
+        . /opt/esp/idf/export.sh
+        idf.py build 2>&1 | tee build.log
+
+    - name: Collect build artifacts
+      id: artifacts
+      run: |
+        mkdir -p /tmp/artifacts
+        # 收集所有构建产物
+        cp build/esp32-midi-gateway.bin /tmp/artifacts/
+        cp build/bootloader/bootloader.bin /tmp/artifacts/ 2>/dev/null || true
+        cp build/partition_table/partition-table.bin /tmp/artifacts/ 2>/dev/null || true
+        cp build/ota_data_initial.bin /tmp/artifacts/ 2>/dev/null || true
+        cp build/esp32-midi-gateway.elf /tmp/artifacts/ 2>/dev/null || true
+        cp build/flash_args /tmp/artifacts/ 2>/dev/null || true
+        cp build/build.log /tmp/artifacts/ 2>/dev/null || true
+        ls -la /tmp/artifacts/
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32s3-midi-gateway-firmware
+        path: /tmp/artifacts/
+        retention-days: 7
+
+    - name: Prepare binary for release
+      run: |
+        echo "Build complete for ESP32-S3 N16R8"
+        echo "Firmware size: $(stat -c%s build/esp32-midi-gateway.bin) bytes"
+        echo "Build ID: ${{ github.run_id }}"
+        echo "Run number: ${{ github.run_number }}"
+
+  phone-receiver-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: phone-receiver
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: phone-receiver
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Check Python syntax
+      run: |
+        python -m py_compile midi_receiver.py
+        echo "Python syntax check passed"
+
+    - name: Upload phone receiver script
+      uses: actions/upload-artifact@v4
+      with:
+        name: phone-receiver-scripts
+        path: phone-receiver/
+        retention-days: 7
