@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-S3 MIDI网关管理</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="login-page" class="page">
+            <div class="card">
+                <h1>ESP32-S3 MIDI 网关</h1>
+                <div class="form-group">
+                    <label>账号</label>
+                    <input type="text" id="login-user" value="xueyixuan2026">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="login-pass" value="xueyixuan2026">
+                </div>
+                <button onclick="doLogin()">登录</button>
+                <p id="login-error" class="error hidden">账号或密码错误</p>
+            </div>
+        </div>
+
+        <div id="dashboard-page" class="page hidden">
+            <div class="top-bar">
+                <h2>MIDI 网关管理</h2>
+                <span id="status-indicator" class="status-dot"></span>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="overview">概览</button>
+                <button class="tab-btn" data-tab="midi">MIDI配置</button>
+                <button class="tab-btn" data-tab="network">网络配置</button>
+                <button class="tab-btn" data-tab="security">安全设置</button>
+                <button class="tab-btn" data-tab="system">系统管理</button>
+            </div>
+
+            <div id="tab-overview" class="tab-content active">
+                <div class="card">
+                    <h3>设备状态</h3>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="label">IP地址</span>
+                            <span id="s-ip" class="value">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">网络模式</span>
+                            <span id="s-mode" class="value">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">MIDI输入源</span>
+                            <span id="s-midi-source" class="value">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">USB连接</span>
+                            <span id="s-usb" class="value">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">BLE连接</span>
+                            <span id="s-ble" class="value">--</span>
+                        </div>
+                    </div>
+                    <button onclick="refreshStatus()" class="btn-secondary">刷新状态</button>
+                </div>
+            </div>
+
+            <div id="tab-midi" class="tab-content">
+                <div class="card">
+                    <h3>MIDI输入</h3>
+                    <div class="form-group">
+                        <label>输入源</label>
+                        <select id="cfg-midi-input">
+                            <option value="0">USB</option>
+                            <option value="1">BLE</option>
+                            <option value="2">自动</option>
+                        </select>
+                    </div>
+                    <button onclick="scanBLE()">扫描BLE设备</button>
+                    <div id="ble-devices" class="device-list"></div>
+                </div>
+                <div class="card">
+                    <h3>MIDI输出</h3>
+                    <div class="form-group">
+                        <label>输出目标</label>
+                        <select id="cfg-midi-output">
+                            <option value="0">UDP单播</option>
+                            <option value="1">UDP广播</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>目标IP</label>
+                        <input type="text" id="cfg-udp-ip" placeholder="255.255.255.255">
+                    </div>
+                    <div class="form-group">
+                        <label>端口</label>
+                        <input type="number" id="cfg-udp-port" value="5000">
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-network" class="tab-content">
+                <div class="card">
+                    <h3>Wi-Fi配置</h3>
+                    <div class="form-group">
+                        <label>模式</label>
+                        <select id="cfg-wifi-mode">
+                            <option value="1">SoftAP（热点）</option>
+                            <option value="0">Station（路由器）</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>SSID</label>
+                        <input type="text" id="cfg-wifi-ssid">
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="cfg-wifi-password" placeholder="留空不修改">
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-security" class="tab-content">
+                <div class="card">
+                    <h3>数据加密</h3>
+                    <div class="form-group">
+                        <label>加密方式</label>
+                        <select id="cfg-encryption">
+                            <option value="0">无（默认）</option>
+                            <option value="1">AES-128</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>鉴权方式</h3>
+                    <div class="form-group">
+                        <label>鉴权</label>
+                        <select id="cfg-auth-mode">
+                            <option value="0">IP白名单</option>
+                            <option value="1">Key鉴权</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>IP白名单</label>
+                        <textarea id="cfg-ip-whitelist" rows="3" placeholder="192.168.3.0/24"></textarea>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>修改SSH密码</h3>
+                    <div class="form-group">
+                        <label>当前SSH密码</label>
+                        <input type="password" id="ssh-old-pwd">
+                    </div>
+                    <div class="form-group">
+                        <label>新SSH密码</label>
+                        <input type="password" id="ssh-new-pwd">
+                    </div>
+                    <div class="form-group">
+                        <label>敏感操作密码（验证）</label>
+                        <input type="password" id="ssh-sensitive-pwd">
+                    </div>
+                    <button onclick="changeSSHPassword()">修改密码</button>
+                </div>
+                <button onclick="saveConfig()" class="btn-primary">保存全部配置</button>
+            </div>
+
+            <div id="tab-system" class="tab-content">
+                <div class="card">
+                    <h3>紧急制动</h3>
+                    <button onclick="emergencyBrake('engage')" class="btn-danger">紧急停止MIDI转发</button>
+                    <div class="form-group" style="margin-top:10px">
+                        <label>敏感操作密码（解除制动）</label>
+                        <input type="password" id="brake-password">
+                    </div>
+                    <button onclick="emergencyBrake('release')">解除制动</button>
+                </div>
+                <div class="card">
+                    <h3>重置设备</h3>
+                    <p class="warning">此操作将清除所有配置并恢复出厂设置</p>
+                    <div class="form-group">
+                        <label>第一步：输入确认文字</label>
+                        <input type="text" id="reset-confirm-text" placeholder="我已知晓执行此命令的后果，仍然继续">
+                    </div>
+                    <div class="form-group">
+                        <label>第二步：重置密码</label>
+                        <input type="password" id="reset-pwd" placeholder="XUE2026">
+                    </div>
+                    <div class="form-group">
+                        <label>第三步：敏感操作密码</label>
+                        <input type="password" id="reset-sensitive-pwd">
+                    </div>
+                    <button onclick="resetDevice()" class="btn-danger">执行重置</button>
+                </div>
+                <div class="card">
+                    <h3>OTA升级</h3>
+                    <div class="form-group">
+                        <label>选择固件文件</label>
+                        <input type="file" id="ota-file" accept=".bin">
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="ota-backup" checked> 创建冰点备份</label>
+                    </div>
+                    <button onclick="doOTA()" class="btn-primary">上传并升级</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -9,6 +9,7 @@
 #include "esp_http_server.h"
 #include "cJSON.h"
 #include <string.h>
+#include <stdlib.h>
 
 static const char *TAG = "WEB_SRV";
 static httpd_handle_t server = NULL;

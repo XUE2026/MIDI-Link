@@ -5,7 +5,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "lwip/sockets.h"
-#include "lwip/netdb.h"
+#include "lwip/inet.h"
 #include <string.h>
 #include <stdio.h>
 

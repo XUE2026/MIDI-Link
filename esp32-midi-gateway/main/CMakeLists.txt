@@ -12,4 +12,8 @@ idf_component_register(
         "auth_manager.c"
         "config_manager.c"
     INCLUDE_DIRS "."
+    EMBED_FILES "web_assets/index.html"
+    EMBED_FILES "web_assets/style.css"
+    EMBED_FILES "web_assets/script.js"
+    REQUIRES cjson esp_http_server nvs_flash esp_wifi esp_event esp_netif lwip esp_timer esp_ota_ops mbedtls
 )
