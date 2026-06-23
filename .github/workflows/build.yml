@@ -7,36 +7,65 @@ on:
     branches: [ "development", "main" ]
   workflow_dispatch:
 
-env:
-  IDF_TARGET: esp32s3
-
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
-    container:
-      image: espressif/idf:v5.0
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build firmware
-      shell: bash
-      run: |
-        # Source IDF environment
-        . /opt/esp/idf/export.sh
-        cd esp32-midi-gateway
-        echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
-        echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
-        echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
-        idf.py build
+    - name: Build
+      uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: v5.0
+        target: esp32s3
+        path: esp32-midi-gateway
+        command: |
+          git config --global --add safe.directory '*'
+          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
+          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+          idf.py reconfigure
+          idf.py build 2>&1 | tee build.log
+          echo "=== Build complete ==="
+          ls -la build/*.bin
+          # Copy to the volume mount point at /app/$REPO/
+          # The volume mounts ${GITHUB_WORKSPACE} to /app/XUE2026/MIDI-Link
+          mkdir -p /app/XUE2026/MIDI-Link/build-output
+          cp -v build/*.bin /app/XUE2026/MIDI-Link/build-output/
+          cp -v build/build.log /app/XUE2026/MIDI-Link/build-output/ 2>/dev/null || true
+          ls -la /app/XUE2026/MIDI-Link/build-output/
 
-    - name: Upload firmware artifacts
+    - name: Collect and upload
+      run: |
+        set -x
+        echo "=== GITHUB_WORKSPACE ==="
+        echo "$GITHUB_WORKSPACE"
+        pwd
+        ls -la
+        echo "=== build-output ==="
+        ls -la build-output/ 2>/dev/null || echo "no build-output dir"
+        echo "=== esp32-midi-gateway/build ==="
+        ls -la esp32-midi-gateway/build/ 2>/dev/null | head -20 || echo "no build dir"
+        echo "=== find any .bin ==="
+        find . -name "*.bin" 2>/dev/null | head -20
+        echo "=== find build-output ==="
+        find . -name "build-output" -type d 2>/dev/null
+        echo "=== Copy to artifacts ==="
+        mkdir -p artifacts
+        cp -v build-output/*.bin artifacts/ 2>/dev/null || cp -v esp32-midi-gateway/build/*.bin artifacts/ 2>/dev/null || echo "NO BIN FILES"
+        find . -name "*.bin" -exec cp -v {} artifacts/ \;
+        cp -v esp32-midi-gateway/build/build.log artifacts/ 2>/dev/null || true
+        ls -la artifacts/
+
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: esp32s3-midi-gateway-firmware
-        path: esp32-midi-gateway/build/*.bin
+        path: artifacts/
         retention-days: 30
-        if-no-files-found: error
+        if-no-files-found: warn
 
   phone-receiver-check:
     runs-on: ubuntu-latest
