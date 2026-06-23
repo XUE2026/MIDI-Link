@@ -37,8 +37,7 @@ static bool is_first_boot(void)
     }
 
     uint8_t flag = 0;
-    size_t len = sizeof(flag);
-    err = nvs_get_u8(handle, "first_boot_done", &flag, &len);
+    err = nvs_get_u8(handle, "first_boot_done", &flag);
     nvs_close(handle);
 
     return (err != ESP_OK || flag == 0);
