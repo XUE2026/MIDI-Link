@@ -125,7 +125,7 @@ const char *network_manager_get_ip(void)
     return local_ip;
 }
 
-int network_manager_get_sta_list(char output[][16], int max_count)
+int network_manager_get_sta_list(char output[][20], int max_count)
 {
     wifi_sta_list_t sta_list;
     esp_err_t err = esp_wifi_ap_get_sta_list(&sta_list);
@@ -135,7 +135,7 @@ int network_manager_get_sta_list(char output[][16], int max_count)
     
     int count = (sta_list.num > max_count) ? max_count : sta_list.num;
     for (int i = 0; i < count; i++) {
-        snprintf(output[i], 16, MACSTR, MAC2STR(sta_list.sta[i].mac));
+        snprintf(output[i], 20, MACSTR, MAC2STR(sta_list.sta[i].mac));
     }
     return count;
 }

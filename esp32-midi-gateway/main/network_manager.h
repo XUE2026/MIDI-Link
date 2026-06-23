@@ -27,6 +27,6 @@ wifi_mode_t network_manager_get_mode(void);
 const char *network_manager_get_ip(void);
 
 // 获取连接的Station设备列表（SoftAP模式下）
-int network_manager_get_sta_list(char output[][16], int max_count);
+int network_manager_get_sta_list(char output[][20], int max_count);
 
 #endif // NETWORK_MANAGER_H

@@ -63,7 +63,7 @@ static void handle_client(int client_fd)
             midi_engine_ble_scan();
             write(client_fd, "BLE scan initiated\r\n", 20);
         } else if (strcmp(buf, "list") == 0) {
-            char sta_list[8][16];
+            char sta_list[8][20];
             int count = network_manager_get_sta_list(sta_list, 8);
             snprintf(resp, sizeof(resp), "Connected stations: %d\r\n", count);
             write(client_fd, resp, strlen(resp));
