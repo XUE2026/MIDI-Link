@@ -7,51 +7,41 @@ on:
     branches: [ "development", "main" ]
   workflow_dispatch:
 
+env:
+  IDF_TARGET: esp32s3
+
 jobs:
   build-esp32s3:
     runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.0
+      options: --entrypoint ""
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build
-      uses: espressif/esp-idf-ci-action@v1
-      with:
-        esp_idf_version: v5.0
-        target: esp32s3
-        path: esp32-midi-gateway
-        command: |
-          git config --global --add safe.directory '*'
-          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
-          idf.py reconfigure
-          idf.py build 2>&1 | tee build.log
-          echo "--- listing build .bin files ---"
-          ls -la build/*.bin
-          # Fix permissions & copy to workspace root (volume mount location)
-          chmod -R a+r build/
-          mkdir -p /app/github/workspace/artifacts2
-          cp -v build/*.bin /app/github/workspace/artifacts2/
-          cp -v build/build.log /app/github/workspace/artifacts2/ 2>/dev/null || true
-          ls -la /app/github/workspace/artifacts2/
-
-    - name: Collect
+    - name: Build firmware
+      shell: bash
       run: |
-        echo "=== pwd ==="
+        set -x
+        whoami
         pwd
-        echo "=== ls -la ==="
-        ls -la
-        echo "=== find artifacts2 ==="
-        find . -name "artifacts2" -type d 2>/dev/null || echo "no artifacts2 dir"
-        echo "=== checking GITHUB_WORKSPACE ==="
-        echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-        ls -la "$GITHUB_WORKSPACE" 2>/dev/null || echo "cannot access GITHUB_WORKSPACE"
-        echo "=== find any .bin ==="
-        find / -name "esp32-midi-gateway.bin" 2>/dev/null | head -5 || echo "not found"
-        echo "=== find any artifacts dirs ==="
-        find / -name "artifacts*" -type d 2>/dev/null | head -10 || echo "none"
+        ls -la /
+        . /opt/esp/idf/export.sh
+        which idf.py
+        cd esp32-midi-gateway
+        echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
+        echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
+        idf.py build
+
+    - name: Upload firmware artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32s3-midi-gateway-firmware
+        path: esp32-midi-gateway/build/*.bin
+        retention-days: 30
+        if-no-files-found: error
 
   phone-receiver-check:
     runs-on: ubuntu-latest
