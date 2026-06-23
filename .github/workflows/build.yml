@@ -29,11 +29,19 @@ jobs:
           idf.py reconfigure
           idf.py build
 
+    - name: List build output
+      run: |
+        echo "=== Listing entire build dir ==="
+        find esp32-midi-gateway/build -type f 2>/dev/null | head -50
+        echo "=== File sizes ==="
+        du -sh esp32-midi-gateway/build/ 2>/dev/null || echo "no build dir"
+        ls -laR esp32-midi-gateway/build/ 2>/dev/null | grep -v "^$" | head -80
+
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: esp32s3-midi-gateway-firmware
-        path: esp32-midi-gateway/build/*.bin
+        name: esp32s3-midi-gateway-build-dir
+        path: esp32-midi-gateway/build/
         retention-days: 30
         if-no-files-found: error
 
