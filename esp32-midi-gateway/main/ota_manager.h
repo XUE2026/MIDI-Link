@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 // 初始化OTA管理器
 void ota_manager_init(void);
