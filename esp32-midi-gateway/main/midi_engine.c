@@ -33,7 +33,7 @@ static void midi_to_udp_callback(const midi_event_t *event, void *user_data)
 }
 
 // 内部调用：分发MIDI事件
-static void midi_engine_dispatch(const midi_event_t *event)
+static void __attribute__((unused)) midi_engine_dispatch(const midi_event_t *event)
 {
     if (emergency_stopped) {
         return;

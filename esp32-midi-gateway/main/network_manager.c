@@ -2,6 +2,7 @@
 #include "config_manager.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "esp_mac.h"
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include <string.h>
@@ -105,6 +106,14 @@ void network_manager_set_mode(wifi_mode_t mode)
             break;
         case WIFI_MODE_STATION:
             current_mode = WIFI_MODE_STATION;
+            break;
+        case WIFI_MODE_AP:
+            current_mode = WIFI_MODE_AP;
+            break;
+        case WIFI_MODE_APSTA:
+            current_mode = WIFI_MODE_APSTA;
+            break;
+        default:
             break;
     }
 }
