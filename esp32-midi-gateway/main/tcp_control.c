@@ -53,7 +53,7 @@ static void handle_client(int client_fd)
                 "IP: %s\r\n"
                 "USB MIDI: %s\r\n"
                 "BLE MIDI: %s\r\n",
-                network_manager_get_mode() == WIFI_MODE_SOFTAP ? "SoftAP" : "Station",
+                network_manager_get_mode() == WIFI_MODE_AP ? "SoftAP" : "Station",
                 network_manager_get_ip(),
                 midi_engine_usb_is_connected() ? "Connected" : "Disconnected",
                 midi_engine_ble_is_connected() ? "Connected" : "Disconnected"

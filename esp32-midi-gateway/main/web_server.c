@@ -17,7 +17,7 @@ static bool logged_in = false;
 
 // --- 辅助函数 ---
 
-static bool validate_sensitive_pwd(const char *input)
+static bool __attribute__((unused)) validate_sensitive_pwd(const char *input)
 {
     gateway_config_t config;
     config_manager_load(&config);
@@ -106,7 +106,7 @@ static esp_err_t status_handler(httpd_req_t *req)
     cJSON *json = cJSON_CreateObject();
     cJSON_AddStringToObject(json, "ip", network_manager_get_ip());
     cJSON_AddStringToObject(json, "mode", 
-        network_manager_get_mode() == WIFI_MODE_SOFTAP ? "SoftAP" : "Station");
+        network_manager_get_mode() == WIFI_MODE_AP ? "SoftAP" : "Station");
     cJSON_AddStringToObject(json, "midi_source", 
         midi_engine_get_input_source() == MIDI_INPUT_USB ? "USB" :
         midi_engine_get_input_source() == MIDI_INPUT_BLE ? "BLE" : "Auto");
@@ -384,7 +384,6 @@ static esp_err_t ota_upload_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
     
-    char buf[1024];
     size_t total_len = req->content_len;
     bool backup = false;
     
@@ -406,8 +405,10 @@ static esp_err_t ota_upload_handler(httpd_req_t *req)
         received += ret;
     }
     
+    char qs[64];
     char backup_str[8];
-    if (httpd_query_key_value(req->query_str, "backup", backup_str, sizeof(backup_str)) == ESP_OK) {
+    if (httpd_req_get_url_query_str(req, qs, sizeof(qs)) == ESP_OK &&
+        httpd_query_key_value(qs, "backup", backup_str, sizeof(backup_str)) == ESP_OK) {
         backup = (strcmp(backup_str, "1") == 0);
     }
     

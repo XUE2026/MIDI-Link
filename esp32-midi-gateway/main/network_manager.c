@@ -8,7 +8,7 @@
 #include <string.h>
 
 static const char *TAG = "NET_MGR";
-static wifi_mode_t current_mode = WIFI_MODE_SOFTAP;
+static wifi_mode_t current_mode = WIFI_MODE_AP;
 static char local_ip[16] = SOFTAP_IP;
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
@@ -77,7 +77,7 @@ void network_manager_start_softap(const char *ssid, const char *password)
     
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
     strcpy(local_ip, SOFTAP_IP);
-    current_mode = WIFI_MODE_SOFTAP;
+    current_mode = WIFI_MODE_AP;
     ESP_LOGI(TAG, "SoftAP started - SSID: %s", ssid);
 }
 
@@ -94,21 +94,18 @@ void network_manager_start_station(const char *ssid, const char *password)
     
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     esp_wifi_connect();
-    current_mode = WIFI_MODE_STATION;
+    current_mode = WIFI_MODE_STA;
     ESP_LOGI(TAG, "Station mode connecting to SSID: %s", ssid);
 }
 
 void network_manager_set_mode(wifi_mode_t mode)
 {
     switch (mode) {
-        case WIFI_MODE_SOFTAP:
-            current_mode = WIFI_MODE_SOFTAP;
-            break;
-        case WIFI_MODE_STATION:
-            current_mode = WIFI_MODE_STATION;
-            break;
         case WIFI_MODE_AP:
             current_mode = WIFI_MODE_AP;
+            break;
+        case WIFI_MODE_STA:
+            current_mode = WIFI_MODE_STA;
             break;
         case WIFI_MODE_APSTA:
             current_mode = WIFI_MODE_APSTA;
