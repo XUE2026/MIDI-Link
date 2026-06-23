@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: espressif/idf:v5.0
-      options: --entrypoint ""
 
     steps:
     - uses: actions/checkout@v4
@@ -23,12 +22,8 @@ jobs:
     - name: Build firmware
       shell: bash
       run: |
-        set -x
-        whoami
-        pwd
-        ls -la /
+        # Source IDF environment
         . /opt/esp/idf/export.sh
-        which idf.py
         cd esp32-midi-gateway
         echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
         echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
