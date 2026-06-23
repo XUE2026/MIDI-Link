@@ -17,9 +17,12 @@ jobs:
     - name: Build firmware in Docker
       continue-on-error: true
       run: |
+        REALPATH=$(readlink -f .)
+        echo "Real path: $REALPATH"
+        echo "PWD: $(pwd)"
         docker run --rm \
           -e IDF_TARGET=esp32s3 \
-          -v "$(pwd):/workspace" \
+          -v "$REALPATH:/workspace" \
           -w "/workspace/esp32-midi-gateway" \
           espressif/idf:v5.0 \
           /bin/bash -c ' \
@@ -37,10 +40,12 @@ jobs:
     - name: Collect and upload
       run: |
         set -x
+        echo "=== Real path ==="
+        readlink -f .
         echo "=== Checking for .bin files ==="
         ls -la *.bin 2>/dev/null || echo "NO .bin files at root"
         echo "=== Checking build.log ==="
-        cat build.log 2>/dev/null || echo "NO build.log"
+        ls -la build.log 2>/dev/null && cat build.log || echo "NO build.log"
         echo "=== Checking build dir ==="
         ls -la esp32-midi-gateway/build/*.bin 2>/dev/null || echo "NO .bin files in build"
         echo "=== Collecting ==="
