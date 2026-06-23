@@ -19,4 +19,5 @@ phone-receiver/*.pyc
 .DS_Store
 
 # 日志
-*.log
+*.log# 项目描述 - 不允许推送到GitHub
+项目描述.md
