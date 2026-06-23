@@ -15,5 +15,5 @@ idf_component_register(
     EMBED_FILES "web_assets/index.html"
     EMBED_FILES "web_assets/style.css"
     EMBED_FILES "web_assets/script.js"
-    REQUIRES cjson esp_http_server nvs_flash esp_wifi esp_event esp_netif lwip esp_timer esp_ota_ops mbedtls
+    REQUIRES cjson esp_http_server nvs_flash esp_wifi esp_event esp_netif lwip esp_timer app_update mbedtls
 )
