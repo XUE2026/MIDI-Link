@@ -13,7 +13,9 @@
 
 static const char *TAG = "WEB_SRV";
 static httpd_handle_t server = NULL;
-static bool logged_in = false;
+
+#define AUTH_HEADER_PREFIX "Bearer "
+#define AUTH_HEADER_PREFIX_LEN 7
 
 // --- 辅助函数 ---
 
@@ -22,6 +24,36 @@ static bool __attribute__((unused)) validate_sensitive_pwd(const char *input)
     gateway_config_t config;
     config_manager_load(&config);
     return (strcmp(input, config.sensitive_password) == 0);
+}
+
+static bool extract_token_from_request(httpd_req_t *req, char *token_buf, size_t buf_len)
+{
+    char auth_hdr[256];
+    if (httpd_req_get_hdr_value_str(req, "Authorization", auth_hdr, sizeof(auth_hdr)) != ESP_OK) {
+        return false;
+    }
+
+    if (strncmp(auth_hdr, AUTH_HEADER_PREFIX, AUTH_HEADER_PREFIX_LEN) != 0) {
+        return false;
+    }
+
+    const char *token = auth_hdr + AUTH_HEADER_PREFIX_LEN;
+    if (strlen(token) >= buf_len) {
+        return false;
+    }
+
+    strncpy(token_buf, token, buf_len - 1);
+    token_buf[buf_len - 1] = '\0';
+    return true;
+}
+
+static bool check_auth(httpd_req_t *req)
+{
+    char token[AUTH_TOKEN_LEN + 8];
+    if (extract_token_from_request(req, token, sizeof(token))) {
+        return auth_manager_validate_token(token);
+    }
+    return false;
 }
 
 // --- HTTP处理器 ---
@@ -65,41 +97,70 @@ static esp_err_t login_handler(httpd_req_t *req)
     int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
     if (ret <= 0) return ESP_FAIL;
     buf[ret] = 0;
-    
+
     cJSON *json = cJSON_Parse(buf);
     if (!json) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
         return ESP_FAIL;
     }
-    
+
     cJSON *user = cJSON_GetObjectItem(json, "username");
     cJSON *pass = cJSON_GetObjectItem(json, "password");
-    
+
     bool auth_ok = false;
-    if (user && pass && 
-        strcmp(user->valuestring, "xueyixuan2026") == 0 &&
-        strcmp(pass->valuestring, "xueyixuan2026") == 0) {
-        logged_in = true;
-        auth_ok = true;
+    char token[AUTH_TOKEN_LEN + 8] = {0};
+
+    gateway_config_t config;
+    config_manager_load(&config);
+
+    if (user && pass &&
+        strcmp(user->valuestring, "admin") == 0 &&
+        strcmp(pass->valuestring, config.sensitive_password) == 0) {
+        if (auth_manager_generate_token(token, sizeof(token))) {
+            auth_ok = true;
+        }
     }
-    
+
     cJSON *resp = cJSON_CreateObject();
     cJSON_AddBoolToObject(resp, "success", auth_ok);
-    
+    if (auth_ok) {
+        cJSON_AddStringToObject(resp, "token", token);
+        cJSON_AddNumberToObject(resp, "expires_in", AUTH_TOKEN_EXPIRE_MS / 1000);
+    }
+
     const char *resp_str = cJSON_Print(resp);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, resp_str, strlen(resp_str));
-    
+
     cJSON_free((void *)resp_str);
     cJSON_Delete(json);
     cJSON_Delete(resp);
     return ESP_OK;
 }
 
+static esp_err_t logout_handler(httpd_req_t *req)
+{
+    char token[AUTH_TOKEN_LEN + 8];
+    if (extract_token_from_request(req, token, sizeof(token))) {
+        auth_manager_revoke_token(token);
+    }
+
+    cJSON *resp = cJSON_CreateObject();
+    cJSON_AddBoolToObject(resp, "success", true);
+
+    const char *resp_str = cJSON_Print(resp);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, resp_str, strlen(resp_str));
+
+    cJSON_free((void *)resp_str);
+    cJSON_Delete(resp);
+    return ESP_OK;
+}
+
 static esp_err_t status_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -124,8 +185,8 @@ static esp_err_t status_handler(httpd_req_t *req)
 
 static esp_err_t config_get_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -155,8 +216,8 @@ static esp_err_t config_get_handler(httpd_req_t *req)
 
 static esp_err_t config_update_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -221,8 +282,8 @@ static esp_err_t config_update_handler(httpd_req_t *req)
 
 static esp_err_t change_ssh_pwd_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -266,8 +327,8 @@ static esp_err_t change_ssh_pwd_handler(httpd_req_t *req)
 
 static esp_err_t reset_device_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -314,8 +375,8 @@ static esp_err_t reset_device_handler(httpd_req_t *req)
 
 static esp_err_t ble_scan_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -335,8 +396,8 @@ static esp_err_t ble_scan_handler(httpd_req_t *req)
 
 static esp_err_t emergency_brake_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -379,8 +440,8 @@ static esp_err_t emergency_brake_handler(httpd_req_t *req)
 
 static esp_err_t ota_upload_handler(httpd_req_t *req)
 {
-    if (!logged_in) {
-        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Not logged in");
+    if (!check_auth(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
         return ESP_FAIL;
     }
     
@@ -456,6 +517,9 @@ void web_server_init(void)
     
     httpd_uri_t uri_login = { .uri = "/api/login", .method = HTTP_POST, .handler = login_handler };
     httpd_register_uri_handler(server, &uri_login);
+
+    httpd_uri_t uri_logout = { .uri = "/api/logout", .method = HTTP_POST, .handler = logout_handler };
+    httpd_register_uri_handler(server, &uri_logout);
     
     httpd_uri_t uri_status = { .uri = "/api/status", .method = HTTP_GET, .handler = status_handler };
     httpd_register_uri_handler(server, &uri_status);
@@ -486,11 +550,13 @@ void web_server_init(void)
 
 bool web_server_authenticate(const char *username, const char *password)
 {
-    return (strcmp(username, "xueyixuan2026") == 0 && 
-            strcmp(password, "xueyixuan2026") == 0);
+    gateway_config_t config;
+    config_manager_load(&config);
+    return (strcmp(username, "admin") == 0 &&
+            strcmp(password, config.sensitive_password) == 0);
 }
 
 bool web_server_is_logged_in(void)
 {
-    return logged_in;
+    return false;
 }

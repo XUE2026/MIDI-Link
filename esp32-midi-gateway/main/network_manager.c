@@ -76,7 +76,8 @@ void network_manager_start_softap(const char *ssid, const char *password)
     }
     
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
-    strcpy(local_ip, SOFTAP_IP);
+    strncpy(local_ip, SOFTAP_IP, sizeof(local_ip) - 1);
+    local_ip[sizeof(local_ip) - 1] = '\0';
     current_mode = WIFI_MODE_AP;
     ESP_LOGI(TAG, "SoftAP started - SSID: %s", ssid);
 }

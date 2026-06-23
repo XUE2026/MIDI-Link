@@ -22,8 +22,8 @@ void udp_transport_init(void);
 // 设置目标（单播或广播）
 void udp_transport_set_target(midi_output_target_t target, const char *ip, uint16_t port);
 
-// 发送MIDI事件
-void udp_transport_send(const midi_packet_t *packet);
+// 发送MIDI事件（带重试），成功返回true
+bool udp_transport_send(const midi_packet_t *packet);
 
 // 启动/停止广播
 void udp_transport_start_broadcast(void);

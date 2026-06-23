@@ -62,7 +62,7 @@ void config_manager_init(void);
 
 // 加载/保存配置
 void config_manager_load(gateway_config_t *config);
-void config_manager_save(const gateway_config_t *config);
+bool config_manager_save(const gateway_config_t *config);
 
 // 获取默认配置
 void config_manager_get_default(gateway_config_t *config);

@@ -28,8 +28,10 @@ static void midi_to_udp_callback(const midi_event_t *event, void *user_data)
     packet.data1 = event->data1;
     packet.data2 = event->data2;
     packet.channel = event->channel;
-    
-    udp_transport_send(&packet);
+
+    if (!udp_transport_send(&packet)) {
+        ESP_LOGW(TAG, "MIDI to UDP send failed");
+    }
 }
 
 // 内部调用：分发MIDI事件
