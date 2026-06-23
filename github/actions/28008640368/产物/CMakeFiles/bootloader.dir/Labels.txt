@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/CMakeFiles/bootloader
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/CMakeFiles/bootloader.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/CMakeFiles/bootloader-complete.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

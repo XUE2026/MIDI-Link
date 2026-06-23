@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/CMakeFiles/bootloader"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/CMakeFiles/bootloader.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/CMakeFiles/bootloader-complete.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule"
+		},
+		{
+			"file" : "/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"bootloader"
+		],
+		"name" : "bootloader"
+	}
+}
