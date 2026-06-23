@@ -30,34 +30,31 @@ jobs:
           idf.py build 2>&1 | tee build.log
           echo "=== Build complete ==="
           ls -la build/*.bin
-          # Copy to the volume mount point at /app/$REPO/
-          # The volume mounts ${GITHUB_WORKSPACE} to /app/XUE2026/MIDI-Link
-          mkdir -p /app/XUE2026/MIDI-Link/build-output
-          cp -v build/*.bin /app/XUE2026/MIDI-Link/build-output/
-          cp -v build/build.log /app/XUE2026/MIDI-Link/build-output/ 2>/dev/null || true
-          ls -la /app/XUE2026/MIDI-Link/build-output/
+          # Touch marker file so we know build completed
+          touch /tmp/build_complete
 
-    - name: Collect and upload
+    - name: Extract artifacts via docker cp
       run: |
         set -x
-        echo "=== GITHUB_WORKSPACE ==="
-        echo "$GITHUB_WORKSPACE"
-        pwd
-        ls -la
-        echo "=== build-output ==="
-        ls -la build-output/ 2>/dev/null || echo "no build-output dir"
-        echo "=== esp32-midi-gateway/build ==="
-        ls -la esp32-midi-gateway/build/ 2>/dev/null | head -20 || echo "no build dir"
-        echo "=== find any .bin ==="
-        find . -name "*.bin" 2>/dev/null | head -20
-        echo "=== find build-output ==="
-        find . -name "build-output" -type d 2>/dev/null
-        echo "=== Copy to artifacts ==="
-        mkdir -p artifacts
-        cp -v build-output/*.bin artifacts/ 2>/dev/null || cp -v esp32-midi-gateway/build/*.bin artifacts/ 2>/dev/null || echo "NO BIN FILES"
-        find . -name "*.bin" -exec cp -v {} artifacts/ \;
-        cp -v esp32-midi-gateway/build/build.log artifacts/ 2>/dev/null || true
-        ls -la artifacts/
+        # Find the container that ran the build
+        CONTAINER_ID=$(docker ps -a --filter "ancestor=espressif/idf:v5.0" --format "{{.ID}}" | head -1)
+        echo "Found container: $CONTAINER_ID"
+        if [ -n "$CONTAINER_ID" ]; then
+          mkdir -p artifacts
+          # Copy files from container
+          docker cp "$CONTAINER_ID:/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/" artifacts/ 2>/dev/null || \
+          docker cp "$CONTAINER_ID:/app/XUE2026/MIDI-Link/esp32-midi-gateway/build/" artifacts/ 2>/dev/null || \
+          docker cp "$CONTAINER_ID:/workspace/esp32-midi-gateway/build/." artifacts/ 2>/dev/null || \
+          echo "Trying to find the right path..."
+          # Try to explore the container filesystem
+          docker exec "$CONTAINER_ID" find / -name "esp32-midi-gateway.bin" 2>/dev/null | head -5 || true
+          docker exec "$CONTAINER_ID" find / -name "*.bin" -path "*/build/*" 2>/dev/null | head -10 || true
+          docker exec "$CONTAINER_ID" ls -la /app/ 2>/dev/null || true
+        else
+          echo "NO CONTAINER FOUND"
+        fi
+        echo "=== artifacts ==="
+        find artifacts/ -type f 2>/dev/null | head -20 || echo "empty"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
