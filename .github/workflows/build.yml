@@ -22,11 +22,6 @@ jobs:
         path: esp32-midi-gateway
         command: |
           git config --global --add safe.directory '*'
-          echo "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_MODE_OCT=y" >> sdkconfig.defaults
-          echo "CONFIG_ESP32S3_SPIRAM_SIZE_8MB=y" >> sdkconfig.defaults
-          idf.py reconfigure
           idf.py build
 
     - name: List build output
