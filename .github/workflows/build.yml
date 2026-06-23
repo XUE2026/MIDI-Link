@@ -20,9 +20,7 @@ jobs:
         esp_idf_version: v5.0
         target: esp32s3
         path: esp32-midi-gateway
-        command: |
-          git config --global --add safe.directory '*'
-          idf.py build
+        command: idf.py build
 
     - name: List build output
       run: |
